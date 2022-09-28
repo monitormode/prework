@@ -1,3 +1,10 @@
+Cloned this repo as part of my homework, currently developing the fourth option. :)
+Haven't done any tests so far, just giving code sort of logic.
+
+Thanks.
+
+from: https://github.com/artemis-academy/prework
+
 # Pre-work Assignment
 
 Congratulations!! Welcome to Artemis Academy's proof of concept pre-work stage! 
