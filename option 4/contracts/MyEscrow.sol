@@ -11,6 +11,10 @@ contract MyEscrow is AccessControl, ReentrancyGuard {
     // 0.001 ether.   || 1 eth = 1e18
     uint256 speedUpProposal = 1e16; // fee
 
+    // bool clicker represents a switch for instance when pickTheCopper Proposal is active, doesn't allow to create
+    // more escrows or deposit withdraws from senders.
+    bool public clicker;
+
     //escrow and proposal counter
     using Counters for Counters.Counter;
     Counters.Counter private _escrowCounter;
@@ -94,6 +98,8 @@ contract MyEscrow is AccessControl, ReentrancyGuard {
         _escrowCounter.increment();
          //same from above
         _proposalCounter.increment();
+        //clicker value
+        clicker = false;
     }
 
     // modifiers
@@ -195,6 +201,8 @@ contract MyEscrow is AccessControl, ReentrancyGuard {
         address[] memory _receivers,
         uint256[] memory _totalShares
     ) public _isNotPerma returns (uint256) {
+        //requires clicker to be false.
+        require(!clicker, "ATM this function is disabled. pickTheCopper operations");
         //instance an escrow
         Escrow memory _esc;
 
@@ -243,6 +251,7 @@ contract MyEscrow is AccessControl, ReentrancyGuard {
         _isSender(_escrowId)
         _isNotPerma
     {
+        require(!clicker, "The contract is currently halted due pickTheCopper operations");
         //check if escrow is TIMELOCKED, so running.
         require(escrowList[_escrowId].locked == EscrowBool.TIMELOCKED);
         //aumentar balance global del escrow dentro del array
@@ -713,6 +722,8 @@ contract MyEscrow is AccessControl, ReentrancyGuard {
             ""
         );
         require(sent, "Failed to send Ether");
+        //after withdraw completion we set back clicker to off
+        clicker = false;
     }
 
     /// @dev createPickTheCoppersProposal is only callable by ROLE_PAUSER and starts a proposal whether 
@@ -720,7 +731,9 @@ contract MyEscrow is AccessControl, ReentrancyGuard {
     function createPickTheCoppersProposal() public onlyRole(ROLE_PAUSER) {
         // check first if all escrows have Escrowbool.TERMINATED enum
         require(_areTerminated());
-        // continues..
+        // continues with a set of bool click to true.
+        clicker = true;
+        //value for the proposalIndex
         uint256 coppersIndex = 0;
         //instance of new proposal in the array.
         Proposal storage proposal = proposals[coppersIndex];
@@ -758,6 +771,12 @@ contract MyEscrow is AccessControl, ReentrancyGuard {
                 escrowList[_prop].senders[i + j] = escrowList[i].senders[j];
             }
         }
+    }
+
+    /// @dev setClicker allows ROLE_USER to set a new value for bool clicker
+    /// @param _click is the new value for bool clicker.
+    function setClicker(bool _click) public onlyRole(ROLE_PAUSER) {
+        clicker = _click;
     }
 
     // Function to receive Ether. msg.data must be empty
