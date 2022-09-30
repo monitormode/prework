@@ -90,6 +90,10 @@ contract MyEscrow is AccessControl, ReentrancyGuard {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(ROLE_SENDER, msg.sender);
         _grantRole(ROLE_PAUSER, msg.sender);
+        //starting escrowcounter in 1, 0 reserved for master withdraw
+        _escrowCounter.increment();
+         //same from above
+        _proposalCounter.increment();
     }
 
     // modifiers
@@ -100,6 +104,7 @@ contract MyEscrow is AccessControl, ReentrancyGuard {
         _;
     }
 
+    //check if sender is in any escrow from the escrowList
     modifier _isFromAllSenders(address add) {
         require(_isSenderFromEscrowList(add));
         _;
@@ -347,6 +352,24 @@ contract MyEscrow is AccessControl, ReentrancyGuard {
         }
         return isOk;
     }
+    
+    /// @dev _areExecuted is a function acting as a modifier that checks if all escrows are executed
+    /// before calling pickTheCoopers.
+    function _areTerminated() internal view returns (bool) {
+        uint256 counter;
+        for (uint256 i = 0; i < escrowList.length; i++) {
+            if (escrowList[i].locked == EscrowBool.TERMINATED) {
+                counter++;
+            }
+        }
+        return counter == escrowList.length;
+    }
+
+    /// @dev isRoleSender FOR TESTING PURPOSES
+    /// @param sender represent the address to check
+    function hasRoleSender(address sender) public view returns (bool) {
+        return hasRole(ROLE_SENDER, sender);
+    }
 
     /// @dev withdrawEscrow has the modifier _isSender(_eId)
     /// only callable by senders [] included in that escrow id
@@ -406,7 +429,7 @@ contract MyEscrow is AccessControl, ReentrancyGuard {
         require(!isProposed[_eId]);
 
         // we reserve proposalId = 0 to createPickTheCoppers() starting with proposalId = counter.current() + 1;
-        uint256 numProposals = _proposalCounter.current() + 1;
+        uint256 numProposals = _proposalCounter.current();
         //instance of new proposal in the array.
         Proposal storage proposal = proposals[numProposals];
         //values
@@ -461,7 +484,7 @@ contract MyEscrow is AccessControl, ReentrancyGuard {
             proposals[proposalIndex].voters[msg.sender] = false;
             proposal.noVotes += numVotes;
         }
-
+        //event
         emit ProposalVoteOn(msg.sender, proposalIndex, vote);
     }
 
@@ -496,7 +519,7 @@ contract MyEscrow is AccessControl, ReentrancyGuard {
             proposals[proposalIndex].voters[msg.sender] = false;
             proposal.noVotes += numVotes;
         }
-
+        //event
         emit ProposalVoteOnPickTheCopperProposal(
             msg.sender,
             proposalIndex,
@@ -532,21 +555,26 @@ contract MyEscrow is AccessControl, ReentrancyGuard {
         escrowList[_prop].timelock = block.timestamp - 1;
     }
 
-    /// @dev executePickTheCoppersProposal allows
+    /// @dev executePickTheCoppersProposal allows after coppers proposal votation to start pickTheCoppers() function
+    /// or not, depending if there are more yesVotes than noVotes
+    /// @param _addr represent the address where we are going to withdraw ETH.
     function executePickTheCoppersProposal(address payable _addr)
         public
+        _inactiveProposalOnly(0)
         onlyRole(ROLE_SENDER)
     {
+        require(_isExpired(0));
         Proposal storage proposal = proposals[0];
 
         if (proposal.yesVotes > proposal.noVotes) {
-            //exec = true
-            proposal.executed = true;
-            //set escrowList locked to .TERMINATED if voting is OK
-            escrowList[0].locked = EscrowBool.TERMINATED;
             //after changing enum state we can claim the tokens
             pickTheCoppers(_addr);
-        }
+        } 
+
+        //exec = true
+        proposal.executed = true;
+        //set escrowList locked to .TERMINATED if voting is OK
+        escrowList[0].locked = EscrowBool.TERMINATED;
     }
 
     /// @dev executeCancelProposal allows any CryptoDevsNFT holder to execute a proposal after it's deadline has been exceeded
@@ -667,12 +695,6 @@ contract MyEscrow is AccessControl, ReentrancyGuard {
         emit WalletPermaBan(_wallet);
     }
 
-    /// @dev isRoleSender FOR TESTING PURPOSES
-    /// @param sender represent the address to check
-    function isRoleSender(address sender) public view returns (bool) {
-        return hasRole(ROLE_SENDER, sender);
-    }
-
     /// @dev pickTheCoopers is a function supposed to exec after all escrow withdraws are executed
     /// and all shares are with their receivers. This is thought in case there's any Eth remaining.
     /// This is only callable by the ROLE_PAUSER in this case only the owner
@@ -693,6 +715,8 @@ contract MyEscrow is AccessControl, ReentrancyGuard {
         require(sent, "Failed to send Ether");
     }
 
+    /// @dev createPickTheCoppersProposal is only callable by ROLE_PAUSER and starts a proposal whether 
+    /// would be allowed to withdraw funds or not. All senders from all escrows can vote.
     function createPickTheCoppersProposal() public onlyRole(ROLE_PAUSER) {
         // check first if all escrows have Escrowbool.TERMINATED enum
         require(_areTerminated());
@@ -723,6 +747,8 @@ contract MyEscrow is AccessControl, ReentrancyGuard {
         //if all ok, return
     }
 
+    /// @dev _addAllSendersToProposal internal function for adding all senders to createPickTheCoppersProposal
+    /// @param _prop in this case we insert a value, reserved 0 for the proposal.
     function _addAllSendersToProposal(uint256 _prop) internal {
         for (uint256 i = 1; i < escrowList.length; i++) {
             for (uint256 j = 0; i < escrowList[i].senders.length; j++) {
@@ -732,19 +758,6 @@ contract MyEscrow is AccessControl, ReentrancyGuard {
                 escrowList[_prop].senders[i + j] = escrowList[i].senders[j];
             }
         }
-    }
-
-    /// @dev _areExecuted is a function acting as a modifier that checks if all escrows are executed
-    /// before calling pickTheCoopers.
-    function _areTerminated() internal view returns (bool) {
-        uint256 counter;
-        for (uint256 i = 0; i < escrowList.length; i++) {
-            if (escrowList[i].locked == EscrowBool.TERMINATED) {
-                counter++;
-            }
-        }
-
-        return counter == escrowList.length;
     }
 
     // Function to receive Ether. msg.data must be empty
