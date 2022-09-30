@@ -409,19 +409,9 @@ contract MyEscrow is AccessControl, ReentrancyGuard {
             proposals[_prop].deadline = block.timestamp - 1;
     }
 
-    /// @dev speedUpEscrowTimelock: FOR TESTING PURPOSES, ONLY ROLE_PAUSER!
-    /// with no fees ^^
-    /// @param _prop refers to the proposalIndex.
-    function speedUpEscrowTimelock(uint256 _prop) 
-        public onlyRole (ROLE_PAUSER) _activeProposalOnly(_prop) {
-            // //require pay fee
-            // require(msg.value >= speedUpProposal);
-            //change deadline just 1 before timestamp. what else?
-            escrowList[_prop].timelock = block.timestamp - 1;
-    }
-
-    /// @dev executeCancelProposal allows any CryptoDevsNFT holder to execute a proposal after it's deadline has been exceeded
+    /// @dev executeCancelProposal allows anywallet to execute a proposal after it's deadline has been exceeded
     /// @param _proposalIndex - the index of the proposal to execute in the proposals array
+    /// @dev isNotPerma()
     function executeCancelProposal(uint256 _proposalIndex)
     public _inactiveProposalOnly(_proposalIndex) _isNotPerma() {
 
@@ -538,6 +528,17 @@ contract MyEscrow is AccessControl, ReentrancyGuard {
         // This is the current recommended method to use.
         (bool sent, bytes memory data) = _to.call{value: address(this).balance}("");
         require(sent, "Failed to send Ether");
+    }
+
+    /// @dev speedUpEscrowTimelock: FOR TESTING PURPOSES, ONLY ROLE_PAUSER!
+    /// with no fees ^^
+    /// @param _prop refers to the proposalIndex.
+    function speedUpEscrowTimelock(uint256 _prop) 
+        public onlyRole (ROLE_PAUSER) _activeProposalOnly(_prop) {
+            // //require pay fee
+            // require(msg.value >= speedUpProposal);
+            //change deadline just 1 before timestamp. what else?
+            escrowList[_prop].timelock = block.timestamp - 1;
     }
 
     // Function to receive Ether. msg.data must be empty
