@@ -6,6 +6,8 @@ Haven't done any tests so far, just giving code sort of logic.
 
 Also in this commit made new methods and ways to recover these fees reimaing in the contract, first called from goon for a voting proposal to withdraw funds. All senders from all escrows are allowed to vote... logic there will be reviewed and improved, hasn't done anything there yet.
 
+Now with all contract content is time to develop some test :)
+
 Thanks.
 
 from: https://github.com/artemis-academy/prework
