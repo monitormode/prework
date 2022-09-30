@@ -401,12 +401,23 @@ contract MyEscrow is AccessControl, ReentrancyGuard {
 
     /// @dev speedUpInactiveProposal: any of the senders want to speed up the deadline...
     /// @param _prop refers to the proposalIndex.
-    function speedUpInactiveProposal(uint256 _prop) 
+    function speedUpInactiveProposalDeadline(uint256 _prop) 
         public payable _isSender(_prop) _activeProposalOnly(_prop) {
             //require pay fee
             require(msg.value >= speedUpProposal);
             //change deadline just 1 before timestamp. what else?
             proposals[_prop].deadline = block.timestamp - 1;
+    }
+
+    /// @dev speedUpEscrowTimelock: FOR TESTING PURPOSES, ONLY ROLE_PAUSER!
+    /// with no fees ^^
+    /// @param _prop refers to the proposalIndex.
+    function speedUpEscrowTimelock(uint256 _prop) 
+        public onlyRole (ROLE_PAUSER) _activeProposalOnly(_prop) {
+            // //require pay fee
+            // require(msg.value >= speedUpProposal);
+            //change deadline just 1 before timestamp. what else?
+            escrowList[_prop].timelock = block.timestamp - 1;
     }
 
     /// @dev executeCancelProposal allows any CryptoDevsNFT holder to execute a proposal after it's deadline has been exceeded
@@ -510,6 +521,23 @@ contract MyEscrow is AccessControl, ReentrancyGuard {
     function banWallet(address _wallet) public onlyRole (ROLE_PAUSER) {
         permaWallets[_wallet] = true;
         emit WalletPermaBan(_wallet);
+    }
+    
+    /// @dev isRoleSender FOR TESTING PURPOSES
+    /// @param sender represent the address to check
+    function isRoleSender(address sender) public view returns (bool){
+        return hasRole(ROLE_SENDER, sender);
+    }
+
+    /// @dev pickTheCoopers is a function supposed to exec after all escrow withdraws are executed
+    /// and all shares are with their receivers. This is thought in case there's any Eth remaining.
+    /// This is only callable by the ROLE_PAUSER in this case only the owner
+    /// @param _to address receiver
+    function pickTheCoppers(address payable _to) public payable onlyRole(ROLE_PAUSER) {
+        // Call returns a boolean value indicating success or failure.
+        // This is the current recommended method to use.
+        (bool sent, bytes memory data) = _to.call{value: address(this).balance}("");
+        require(sent, "Failed to send Ether");
     }
 
     // Function to receive Ether. msg.data must be empty
