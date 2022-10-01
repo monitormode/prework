@@ -283,7 +283,7 @@ contract MyEscrow is AccessControl, ReentrancyGuard {
         _isNotPerma
     {
         //is not possible to make a deposit to escrowList[0]
-        require(_escrowId != 0);
+        require(_escrowId != 0 , "You can't deposit to this escrowId");
         // checks if bool clicker is false.
         require(!clicker, "The contract is currently halted due pickTheCopper operations");
         //check if escrow is TIMELOCKED, so running.
