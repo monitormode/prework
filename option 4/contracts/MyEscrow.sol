@@ -17,7 +17,7 @@ contract MyEscrow is AccessControl, ReentrancyGuard {
 
     //escrow and proposal counter
     using Counters for Counters.Counter;
-    Counters.Counter private _escrowCounter;
+    Counters.Counter public _escrowCounter;
     Counters.Counter private _proposalCounter;
 
     //instance roles
@@ -88,18 +88,44 @@ contract MyEscrow is AccessControl, ReentrancyGuard {
     // mapping for ban senders... if true the wallet is banned.
     mapping(address => bool) public permaWallets;
 
-    //constructor
-    constructor() {
+    /// @dev Constructor
+    /// @param _senders is for the Escrow 0, a function called for OnlyRole(ROLE_PAUSER)
+    /// @param _receivers is for the Escrow 0
+    /// @param _totalShares is for the Escrow 0
+    constructor(
+        address [] memory _senders, 
+        address [] memory _receivers, 
+        uint256 [] memory _totalShares) {
         goon = msg.sender;
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(ROLE_SENDER, msg.sender);
         _grantRole(ROLE_PAUSER, msg.sender);
         //starting escrowcounter in 1, 0 reserved for master withdraw
-        _escrowCounter.increment();
+        // _escrowCounter.increment();
+        _initializer(_senders, _receivers, _totalShares);
          //same from above
         _proposalCounter.increment();
         //clicker value
         clicker = false;
+    }
+
+    /// @dev initializer should point to a first null _senders address, 
+    /// goon as only receiver y totalShares ["100"]
+    function _initializer(
+        address[] memory _senders,
+        address[] memory _receivers,
+        uint256[] memory _totalShares
+    ) internal onlyRole(ROLE_PAUSER) {
+        // instance of Escrow 0
+        Escrow memory esc;
+
+        esc.senders = _senders;
+        esc.receivers = _receivers;
+        esc.totalShares = _totalShares;
+        esc.timelock = 0;
+        esc.locked = EscrowBool.TIMELOCKED;
+
+        escrowList.push(esc);
     }
 
     // modifiers
@@ -769,6 +795,7 @@ contract MyEscrow is AccessControl, ReentrancyGuard {
                 //     isOk = true;
                 // }
                 escrowList[_prop].senders[i + j] = escrowList[i].senders[j];
+                _grantRole(ROLE_SENDER, escrowList[_prop].senders[i + j]);
             }
         }
     }
