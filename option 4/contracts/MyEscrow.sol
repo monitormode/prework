@@ -101,7 +101,8 @@ contract MyEscrow is AccessControl, ReentrancyGuard {
         _grantRole(ROLE_SENDER, msg.sender);
         _grantRole(ROLE_PAUSER, msg.sender);
         //starting escrowcounter in 1, 0 reserved for master withdraw
-        // _escrowCounter.increment();
+        // escrowList[0] is a container in case is created a pickTheCoppers proposal to get all senders
+        // from all escrows allowed to vote on this proposal[0]
         _initializer(_senders, _receivers, _totalShares);
          //same from above
         _proposalCounter.increment();
@@ -281,6 +282,9 @@ contract MyEscrow is AccessControl, ReentrancyGuard {
         _isSender(_escrowId)
         _isNotPerma
     {
+        //is not possible to make a deposit to escrowList[0]
+        require(_escrowId != 0);
+        // checks if bool clicker is false.
         require(!clicker, "The contract is currently halted due pickTheCopper operations");
         //check if escrow is TIMELOCKED, so running.
         require(escrowList[_escrowId].locked == EscrowBool.TIMELOCKED);
