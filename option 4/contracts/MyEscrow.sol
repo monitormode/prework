@@ -109,25 +109,6 @@ contract MyEscrow is AccessControl, ReentrancyGuard {
         clicker = false;
     }
 
-    /// @dev initializer should point to a first null _senders address, 
-    /// goon as only receiver y totalShares ["100"]
-    function _initializer(
-        address[] memory _senders,
-        address[] memory _receivers,
-        uint256[] memory _totalShares
-    ) internal onlyRole(ROLE_PAUSER) {
-        // instance of Escrow 0
-        Escrow memory esc;
-
-        esc.senders = _senders;
-        esc.receivers = _receivers;
-        esc.totalShares = _totalShares;
-        esc.timelock = 0;
-        esc.locked = EscrowBool.TIMELOCKED;
-
-        escrowList.push(esc);
-    }
-
     // modifiers
     //
     // check if caller is part of the escrow sender array
@@ -214,9 +195,38 @@ contract MyEscrow is AccessControl, ReentrancyGuard {
     );
 
     event PickTheCoppersProposalExecuted(bool exec, address addr);
-
+    
+    //
+    //
     // contract functions
     //
+    //
+    
+    /// @dev initializer should point to a first null _senders address, 
+    /// goon as only receiver y totalShares ["100"]
+    /// @param _senders = ["0x0000000000000000000000000000000000000000"] 
+    /// @param _receivers = ["0x5B38Da6a701c568545dCfcB03FcB875f56beddC4"]  or whatever
+    /// @param _totalShares = ["100"]
+    function _initializer(
+        address[] memory _senders,
+        address[] memory _receivers,
+        uint256[] memory _totalShares
+    ) internal onlyRole(ROLE_PAUSER) {
+        // instance of Escrow 0
+        Escrow memory esc;
+
+        esc.senders = _senders;
+        esc.receivers = _receivers;
+        esc.totalShares = _totalShares;
+        esc.timelock = 0;
+        esc.locked = EscrowBool.TIMELOCKED;
+
+        escrowList.push(esc);
+
+        //event
+        emit EscrowCreated(escrowList.length - 1, _senders, _receivers, _totalShares, esc.timelock, esc.locked);
+    }
+
     /// @dev creating a new escrow
     /// @param _senders is an array containing all allowed addresses that will contribute to the escrow.
     /// @param _receivers another array containing more addresses, this case the ones after the expiring
@@ -231,9 +241,6 @@ contract MyEscrow is AccessControl, ReentrancyGuard {
         require(!clicker, "ATM this function is disabled. pickTheCopper operations");
         //instance an escrow
         Escrow memory _esc;
-
-        //calling counter
-        uint256 _count = _escrowCounter.current();
 
         // adding values to our new _esc
         _esc.senders = _senders;
@@ -253,7 +260,7 @@ contract MyEscrow is AccessControl, ReentrancyGuard {
 
         //emit event
         emit EscrowCreated(
-            _count,
+            escrowList.length - 1,
             _senders,
             _receivers,
             _totalShares,
@@ -261,11 +268,8 @@ contract MyEscrow is AccessControl, ReentrancyGuard {
             EscrowBool.TIMELOCKED
         );
 
-        //para finalizar incrementamos el contador
-        _escrowCounter.increment();
-
         //returns escrow id
-        return _count;
+        return escrowList.length - 1;
     }
 
     /// @dev depositToEscrow - make a deposit

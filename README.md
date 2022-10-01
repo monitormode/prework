@@ -2,11 +2,15 @@ Cloned this repo as part of my homework, currently developing the fourth option.
 Haven't done any tests so far, just giving code sort of logic.
 
 
-**4th option comments:** - My escrow contract exercise differs from the original when it asks that the ones that receive the transactions be the ones that claim the escrow. In this aspect, the _isEscrowReceiver() function is created that can be implemented as a modifier and go from using _isSender(uint _eId) to _isEscrowReceiver(uint256 _eId) modifier.
+**4th option comments:** 
 
-Also in this commit made new methods and ways to recover these fees reimaing in the contract, first called from goon for a voting proposal to withdraw funds. All senders from all escrows are allowed to vote... logic there will be reviewed and improved, hasn't done anything there yet.
+- My escrow contract exercise differs from the original when it asks that the ones that receive the transactions be the ones that claim the escrow. In this aspect, the _isEscrowReceiver() function is created that can be implemented as a modifier and go from using _isSender(uint _eId) to _isEscrowReceiver(uint256 _eId) modifier.
+
+- Also in this commit made new methods and ways to recover these fees reimaing in the contract, first called from goon for a voting proposal to withdraw funds. All senders from all escrows are allowed to vote... logic there will be reviewed and improved, hasn't done anything there yet.
 
 Now with all contract content is time to develop some test :)
+
+- Added _initializer() to constructor to create an instance of the first escrow reserved to create a Proposal 0 only callable from ROLE_PAUSER
 
 Thanks.
 
